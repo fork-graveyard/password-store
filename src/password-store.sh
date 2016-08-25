@@ -220,8 +220,8 @@ cmd_usage() {
 	    $PROGRAM init [--path=subfolder,-p subfolder] gpg-id...
 	        Initialize new password storage and use gpg-id for encryption.
 	        Selectively reencrypt existing passwords using new gpg-id.
-	    $PROGRAM [ls] [subfolder]
-	        List passwords.
+	    $PROGRAM [ls] [--parseable,-p] [subfolder]
+	        List passwords. Optionally, print machine readable output (for feeding back into pass).
 	    $PROGRAM find pass-names...
 	    	List passwords that match pass-names.
 	    $PROGRAM [show] [--clip[=line-number],-c[line-number]] pass-name
@@ -295,12 +295,13 @@ cmd_init() {
 }
 
 cmd_show() {
-	local opts clip_location clip=0
-	opts="$($GETOPT -o c:: -l clip:: -n "$PROGRAM" -- "$@")"
+	local opts clip_location clip=0 parsable=0
+	opts="$($GETOPT -o c::p -l clip::,parsable -n "$PROGRAM" -- "$@")"
 	local err=$?
 	eval set -- "$opts"
 	while true; do case $1 in
 		-c|--clip) clip=1; clip_location="${2:-1}"; shift 2 ;;
+		-p|--parsable) parsable=1; shift;;
 		--) shift; break ;;
 	esac done
 
@@ -324,7 +325,11 @@ cmd_show() {
 		else
 			echo "${path%\/}"
 		fi
-		tree -C -l --noreport "$PREFIX/$path" | tail -n +2 | sed -E 's/\.gpg(\x1B\[[0-9]+m)?( ->|$)/\1\2/g' # remove .gpg at end of line, but keep colors
+		if [[ $parsable -eq 0 ]]; then
+			tree -C -l --noreport "$PREFIX/$path" | tail -n +2 | sed -E 's/\.gpg(\x1B\[[0-9]+m)?( ->|$)/\1\2/g' # remove .gpg at end of line, but keep colors
+		else
+			tree -f -i -l -F --noreport "$PREFIX/$path" | tail -n +2 | grep -v '/$' | sed 's/\.gpg//g' | sed "s|$PREFIX/||g"
+		fi
 	elif [[ -z $path ]]; then
 		die "Error: password store is empty. Try \"pass init\"."
 	else
