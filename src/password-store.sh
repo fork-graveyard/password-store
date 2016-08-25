@@ -320,15 +320,15 @@ cmd_show() {
 			clip "$pass" "$path"
 		fi
 	elif [[ -d $PREFIX/$path ]]; then
-		if [[ -z $path ]]; then
-			echo "Password Store"
-		else
-			echo "${path%\/}"
-		fi
 		if [[ $parsable -eq 0 ]]; then
+			if [[ -z $path ]]; then
+				echo "Password Store"
+			else
+				echo "${path%\/}"
+			fi
 			tree -C -l --noreport "$PREFIX/$path" | tail -n +2 | sed -E 's/\.gpg(\x1B\[[0-9]+m)?( ->|$)/\1\2/g' # remove .gpg at end of line, but keep colors
 		else
-			tree -f -i -l -F --noreport "$PREFIX/$path" | tail -n +2 | grep -v '/$' | sed 's/\.gpg//g' | sed "s|$PREFIX/||g"
+			tree -f -i -l -F --noreport "$PREFIX/$path" | tail -n +2 | grep -v '/$' | sed -E 's/\.gpg(\x1B\[[0-9]+m)?( ->.+|$)//g' | sed "s|$PREFIX/||g"
 		fi
 	elif [[ -z $path ]]; then
 		die "Error: password store is empty. Try \"pass init\"."
